@@ -1,0 +1,47 @@
+# Append `exit 1' at the end of all *.sh - files
+  $ echo "exit 1" >> *.sh
+%
+# adding files to foobar.tar.gz
+  $ eval set =(gunzip < foobar.tar.gz) '
+     tar rf $1 additional.txt &&gzip < $1 > foobar.tar.gz'
+%
+# Redirect output to a file AND display on screen
+  $ foobar >&1 > file1 > file2 > ..
+%
+# pipe single output to multiple inputs
+  $ zcat foobar.Z >> (gzip -9 > file1.gz) \
+      >> (bzip2 -9 > file1.bz2) \
+      >> (acb --best > file1.acb)
+%
+# Append /etc/services at the end of file `foo' and `bar'
+  $ cat /etc/services >> foo >> bar
+%
+# Pipe STDERR
+  $ echo An error >&2 2>&1 | sed -e 's/A/I/'
+%
+# send standard output of one process to standard input of several processes
+# in the pipeline
+  $ setopt multios
+  $ process1 > >(process1) > >(process2)
+%
+# initializing a variable and simultaneously keeping terminal output
+  $ setopt multios
+  $ { a=$(command >&1 >& 3 3 > &- 2>&1);} 3>&1
+%
+# redirect stderr two times
+  $ setopt multios ; program 2> file2 > file1 2>&1
+%
+# Duplicating stdout and stderr to a logfile
+  $ exec 3>&1 > logfile 2>&2 2>&1 >&3 3>&-
+%
+# redirect stderr (only) to a file and to orig. stderr:
+  $ command 2>&2 2>stderr
+# redirect stderr and stdout to separate files and both to orig. stdout:
+  $ command 2>&1 1>&1 2>stderr 1>stdout
+# redirect stderr and stdout to separate files and stdout to orig. stdout
+# AND stderr to orig. stderr:
+  $ command 2>&2 1>&1 2>stderr 1>stdout
+%
+# More fun with STDERR ;)
+  $ ./my-script.sh 2> >(grep -v moron >error.log)|process-output >output.log
+  $  echo "Thats STDOUT" >>(sed 's/stdout/another example/' > foobar)

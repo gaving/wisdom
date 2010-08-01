@@ -1,0 +1,158 @@
+# Remove illegal characters in a fat32 file system. Illegal characters are
+#   / :  ;  *  ?  "  <  >  |
+# NOTE: ``-Q'' and (D) is to include hidden files.
+  $ unwanted='[:;*?\"<>|]'
+  $ zmv -Q "(**/)(*$~unwanted*)(D)" '$1${2//$~unwanted/}'
+%
+# Changing part of a filename (i. e. "file-hell.name" -> "file-heaven.name")
+  $ zmv '(*)hell(*)' '${1}heaven${2}'
+  # or
+  $ zmv '*' '$f:s/hell/heaven/'
+%
+# remove round bracket within filenames
+# i. e. foo-(bar).avi -> foo-bar.avi
+  $ zmv '*' '${f//[()]/}'
+%
+# serially all files (foo.foo > 1.foo, fnord.foo > 2.foo, ..)
+  $ autoload zmv
+  $ ls *
+  1.c  asd.foo  bla.foo  fnord.foo  foo.fnord  foo.foo
+  $ c=1 zmv '*.foo' '$((c++)).foo'
+  $ ls *
+  1.c  1.foo  2.foo  3.foo  4.foo  foo.fnord
+%
+# Rename "file.with.many.dots.txt" by substituting dots (exept for the last
+# one!) with a space
+  $ touch {1..20}-file.with.many.dots.txt
+  $ zmv '(*.*)(.*)' '${1//./ }$2'
+%
+# Remove the first 4 chars from a filename
+  $ zmv -n '*' '$f[5,-1]' # NOTE: The "5" is NOT a mistake in writing!
+%
+# Rename names of all files under the current Dir to lower case, but keep
+# dirnames as-is.
+  $ zmv -Qv '(**/)(*)(.D)' '$1${(L)2}'
+%
+# replace all 4th character, which is "1",  with "2" and so on
+  $ autoload -U zmv
+  $ zmv '(???)1(???[1-4].txt)' '${1}2${2}'
+%
+# Remove the first 15 characters from a string
+  $ touch 111111111111111{a-z}
+  $ autoload zmv
+  $ zmv '*' '$f[16,-1]'
+%
+# Replace spaces (any number of them) with a single dash in file names
+  $ autload zmv
+  $ zmv -n '(**/)(* *)' '$1${2//( #-## #| ##)/-}'
+  # or - with Bash
+  $ find . -depth -name '* *' -exec bash -c '
+  > shopt -s extglob
+  > file=$1
+  > dir=${file%/*}
+  > name=${file##*/}
+  > newname=${name//*([ -]) *([ -])/-}
+  > mv -i -- "$file" "$Dir/$newname"' {} {} \;
+%
+# Clean up file names and remove special characters
+  $ autoload zmv
+  $ zmv -n '(**/)(*)' '$1${2//[^A-Za-z0-9._]/_}'
+%
+# Add *.py to a bunch of python scripts in a directory (some of them end
+# in *.py and give them all a proper extension
+  $ autoload zmv
+  $ zmv -n '(**/)(con*)(#qe,file $REPLY | grep "python script",)' '$1$2.py'
+%
+# lowercase all extensions (i. e. *.JPG) incl. subfolders
+  $ autoload zmv
+  $ zmv '(**/)(*).(#i)jpg' '$1$2.jpg'
+  # Or - without Zsh
+  $ find Dir -name '*.[jJ][pP][gG]' -print | while read f
+  > do
+  >      case $f in
+  >       *.jpg) ;
+  >       *) mv "$f" "${f%.*}.jpg" ;
+  >       esac
+  > done
+%
+# remove leading zeros from file extension
+  $ autoload zmv
+  $ ls
+  filename.001  filename.003  filename.005  filename.007  filename.009
+  filename.002  filename.004  filename.006  filename.008  filename.010
+  $ zmv '(filename.)0##(?*)' '$1$2'
+  $ ls
+  filename.1  filename.10  filename.2  filename.3  filename.4  filename.5 ..
+%
+# renumber files.
+  $ autoload zmv
+  $ ls *
+  foo_10.jpg  foo_2.jpg  foo_3.jpg  foo_4.jpg  foo_5.jpg  foo_6.jpg ..
+  $ zmv -fQ 'foo_(<0->).jpg(.nOn)' 'foo_$(($1 + 1)).jpg'
+  $ ls *
+  foo_10.jpg  foo_11.jpg  foo_3.jpg  foo_4.jpg  foo_5.jpg  ...
+%
+# adding leading zeros to a filename (1.jpg -> 001.jpg, ..
+  $ autoload zmv
+  $ zmv '(<1->).jpg' '${(l:3::0:)1}.jpg'
+%
+# See above, but now only files with a filename >= 30 chars
+  $ autoload zmv
+  $ c=1 zmv "${(l:30-4::?:)}*.foo" '$((c++)).foo'
+%
+# Replace spaces in filenames with a underline
+  $ autoload zmv
+  $ zmv '* *' '$f:gs/ /_'
+%
+# Change the suffix from *.sh to *.pl
+  $ autoload zmv
+  $ zmv -W '*.sh' '*.pl'
+%
+# Add a "".txt" extension to all the files within ${HOME}
+  # ``-.'' is to only rename regular files or symlinks to regular files,
+  # ``D'' is to also rename hidden files (dotfiles))
+  $ autoload zmv
+  $ zmv -Q '/home/**/*(D-.)' '$f.txt'
+  # Or to only rename files that don't have an extension:
+  $ zmv -Q '/home/**/^?*.*(D-.)' '$f.txt'
+%
+# Recursively change filenames with characters ? [ ] / = + < > ; : " , - *
+  $ autoload zmv
+  $ chars='[][?=+<>;",*-]'
+  $ zmv '(**/)(*)' '$1${2//$~chars/%}'
+%
+# Removing single quote from filenames (recursively)
+  $ autoload zmv
+  $ zmv -Q "(**/)(*'*)(D)" "\$1\${2//'/}"
+%
+# When a new file arrives (named file.txt) rename all files in order to
+# get (e. g. file119.txt becomes file120.txt, file118.txt becomes
+# file119.txt and so on ending with file.txt becoming file1.txt
+  $ autoload zmv
+  $ zmv -fQ 'file([0-9]##).txt(On)' 'file$(($1 + 1)).txt'
+%
+# lowercase/uppercase all files/directories
+  $ autoload zmv
+  $ zmv '(*)' '${(L)1}' # lowercase
+  $ zmv '(*)' '${(U)1}' # uppercase
+%
+# Remove the suffix *.c from all C-Files
+  $ autoload zmv
+  $ zmv '(*).c' '$1'
+%
+# Uppercase only the first letter of all *.mp3 - files
+  $ autoload zmv
+  $ zmv '([a-z])(*).mp3' '${(C)1}$2.mp3'
+%
+# Copy the target `README' in same directory as each `Makefile'
+  $ autoload zmv
+  $ zmv -C '(**/)Makefile' '${1}README'
+%
+# Removing single quote from filenames (recursively)
+  $ autoload zmv
+  $ zmv -Q "(**/)(*'*)(D)" "\$1\${2//'/}"
+%
+# Rename pic1.jpg, pic2.jpg, .. to pic0001.jpg, pic0002.jpg, ..
+  $ autoload zmv
+  $ zmv 'pic(*).jpg' 'pic${(l:4::0:)1}.jpg'
+  $ zmv '(**/)pic(*).jpg' '$1/pic${(l:4::0:)2}.jpg' # recursively

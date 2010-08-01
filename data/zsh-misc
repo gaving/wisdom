@@ -1,0 +1,323 @@
+# Get the names of all files that *don't* match a pattern *anywhere* on the
+# file (and without ``-L'' because its GNUish)
+  $ print -rl -- *(.^e{'grep -q pattern $REPLY'})
+  # or
+  $ : *(.e{'grep -q pattern $REPLY || print -r -- $REPLY'})
+%
+# random numbers
+  $ echo $[${RANDOM}%1000]     # random between 0-999
+  $ echo $[${RANDOM}%11+10]    # random between 10-20
+  $ echo ${(l:3::0:)${RANDOM}} # N digits long (3 digits)
+%
+# reverse a word
+  $ echo "${(j::)${(@Oa)${(s::):-hello}}}"
+%
+# Show newest directory
+  $ ls -ld *(/om[1])
+%
+# random array element
+  $ FILES=( .../files/* )
+  $ feh $FILES[$RANDOM%$#FILES+1]
+%
+# cat first line in all files in this dir
+  $ for file (*(ND-.)) IFS= read -re < $file
+%
+# test if a parameter is numeric
+  $ if [[ $1 == <-> ]] ; then
+         echo numeric
+    else
+         echo non-numeric
+    fi
+%
+# Show me all the .c files for which there doesn't exist a .o file.
+  $ print *.c(e_'[[ ! -e $REPLY:r.o ]]'_)
+%
+# All files in /var/ that are not owned by root
+  $ ls -ld /var/*(^u:root)
+%
+# All files for which the owner hat read and execute permissions
+  $ echo *(f:u+rx:)
+%
+# The same, but also others dont have execute permissions
+  $ echo *(f:u+rx,o-x:)
+%
+# brace expansion - example
+  $ X=(A B C)
+  $ Y=(+ -)
+  $ print -r -- $^X.$^Y
+  A.+ A.- B.+ B.- C.+ C.-
+%
+# Fetch the newest file containing the string 'fgractg*.log' in the
+# filename and contains the string 'ORA-' in it
+  $ file=(fgractg*.log(Nm0om[1]))
+  $ (($#file)) && grep -l ORA- $file
+  # without Zsh
+  $ files=$( find . -name . -o -prune -name 'fgractg*>log' -mtime 0 -print )
+  > if [ -n "$files" ]; then
+  >    IFS='
+  > '
+  > set -f
+  > file=$(ls -td $files | head -1)
+  > grep -l ORA- "$file"
+  > fi
+%
+# keep specified number of child processes running until entire task finished
+  $ zsh -c 'sleep 1 & sleep 3 & sleep 2& print -rl -- $jobtexts'
+%
+# Remove zero length and .bak files in a directory
+  $ rm -i *(.L0) *.bak(.)
+%
+# print out files that dont have extensions
+  $ printf '%s\n' ^?*.*
+  $ printf '%s\n' ^?*.[^.]*(D)
+  $ ls -d -- ^?*.*(D)
+%
+# Finding files which does not contain a specific string
+  $ print -rl file* | comm -2 -3 - <(grep -l string file*)'
+  $ for f (file*(N)) grep -q string $f || print -r $f'
+%
+# Show/Check whether a option is set or not. It works both with $options as
+# with $builtins
+  $ echo $options[correct]
+  off
+  $ $options[zle]
+  on
+%
+# Count the number of directories on the stack
+  $ print $((${${(z)${(f)"$(dirs -v)"}[-1]}[1]} + 1)) # or
+  $ dirs -v | awk '{n=$1}END{print n+1}'
+%
+# Matching all files which do not have a dot in filename
+  $ ls *~*.*(.)
+%
+# Show only the ip-address from ``ifconfig device''
+  # ifconfig from net-tools (Linux)
+  $ print ${${$(LC_ALL=C /sbin/ifconfig eth0)[7]}:gs/addr://}
+  # ifconfig from 4.2BSD {Free,Net,Open}BSD
+  $ print ${$(/sbin/ifconfig tun0)[6]}
+%
+# Ping all the IP addresses in a couple of class C's or all hosts
+# into /etc/hosts
+  $ for i in {1..254}; do ping -c 1 192.168.13.$i; done
+  or
+  $ I=1
+  $ while ( [[ $I -le 255 ]] ) ; do ping -1 2 150.150.150.$I; let I++; done
+  or
+  $ for i in $(sed 's/#.*//' > /etc/hosts | awk '{print $2}')
+  : do
+  :    echo "Trying $i ... "
+  :    ping -c 1 $i ;
+  :    echo '============================='
+  : done
+%
+# load all available modules at startup
+  $ typeset -U m
+  $ m=()
+  $ for md ($module_path) m=($m $md/**/*(*e:'REPLY=${REPLY#$md/}'::r))
+  $ zmodload -i $m
+%
+# Rename all files within a directory such that their names get a numeral
+# prefix in the default sort order.
+  $ i=1; for j in *; do mv $j $i.$j; ((i++)); done
+  $ i=1; for f in *; do mv $f $(echo $i | \
+    awk '{ printf("%03d", $0)}').$f; ((i++)); done
+  $ integer i=0; for f in *; do mv $f $[i+=1].$f; done
+%
+# Find (and print) all symbolic links without a target within the current
+# dirtree.
+  $ $ file **/*(D@) | fgrep broken
+  $ for i in **/*(D@); [[ -f $i || -d $i ]] || echo $i
+  $ echo **/*(@-^./=%p)
+  $ print -l **/*(-@)
+%
+# List all plain files that do not have extensions listed in `fignore'
+  $ ls **/*~*(${~${(j/|/)fignore}})(.)
+  # see above, but now omit executables
+  $ ls **/*~*(${~${(j/|/)fignore}})(.^*)
+%
+# Print out files that dont have extensions (require *setopt extendedglob*
+# and *setopt dotglob*)
+  $ printf '%s\n' ^?*.*
+%
+# List files in reverse order sorted by name
+  $ print -rl -- *(On)
+  or
+  $ print -rl -- *(^on)
+%
+# Synonymic to ``ps ax | awk '{print $1}'''
+  $ print -l /proc/*/cwd(:h:t:s/self//)
+%
+# Get the PID of a process (without ``ps'', ``sed'', ``pgrep'', ..
+# (under Linux)
+  $ pid2 () {
+  >   local i
+  >   for i in /proc/<->/stat
+  > do
+  >   [[ "$(< $i)" = *\((${(j:|:)~@})\)* ]] && echo $i:h:t
+  > done
+  > }
+%
+# for X in 'n' 'o' 'p' 'q' 'r' 's' 't' 'u' 'v' 'w' 'x' 'y'; do ...
+  $ for (( i = 36#n; i <= 36#y; i++ )); do
+  >   print ${$(([##36]i)):l}
+  > done
+# or in combination with ``dc''
+  $ print {$((##n))..$((##y))}P\ 10P | dc
+# or with ``eval''
+  $ eval print '${$(([##36]'{$((36#n))..$((36#y))}')):l}'
+%
+# foreach in one line of shell
+  $ for f (*) print -r -- $f
+%
+# copy a directory recursively without data/files
+  $ dirs=(**/*(/))
+  $ cd -- $dest_root
+  $ mkdir -p -- $dirs
+# or without zsh
+  $ find . -type d -exec env d="$dest_root" \
+    sh -c ' exec mkdir -p -- "$d/$1"' '{}' '{}' \;
+%
+# If `foo=23'', then print with 10 digit with leading '0'.
+  $ foo=23
+  $ print ${(r:10::0:)foo}
+%
+# find the name of all the files in their home directory that have
+# more than 20 characters in their file names
+  print -rl $HOME/${(l:20::?:)~:-}*
+%
+# Save arrays
+  $ print -r -- ${(qq)m} > $nameoffile      # save it
+  $ eval "m=($(cat -- $nameoffile)"            # or use
+  $ m=("${(@Q)${(z)"$(cat -- $nameoffile)"}}") # to restore it
+%
+# get a "ls -l" on all the files in the tree that are younger than a
+# specified age (e.g "ls -l" all the files in the tree that where
+# modified in the last 2 days)
+  $ ls -tld **/*(m-2)
+# This will give you a listing 1 file perl line (not à la ls -R).
+# Think of an easy way to have a "ls -R" style output with
+# only files newer than 2 day old.
+  $ for d (. ./**/*(/)) {
+  >   print -r -- $'\n'${d}:
+  >   cd $d && {
+  >       l=(*(Nm-2))
+  >       (($#l)) && ls -ltd -- $l
+  >       cd ~-
+  >   }
+  > }
+# If you also want directories to be included even if their mtime
+# is more than 2 days old:
+  $ for d (. ./**/*(/)) {
+  >   print -r -- $'\n'${d}:
+  >   cd $d && {
+  >      l=(*(N/,m-2))
+  >      (($#l)) && ls -ltd -- $l
+  >      cd ~-
+  >   }
+  > }
+# And if you want only the directories with mtime < 2 days to be listed:
+  $ for d (. ./**/*(N/m-2)) {
+  >   print -r -- $'\n'${d}:
+  >   cd $d && {
+  >      l=(*(Nm-2))
+  >      (($#l)) && ls -ltd -- $l
+  >      cd ~-
+  >   }
+  > }
+%
+# print 42 ``-''
+  $ echo ${(l:42::-:)}
+# or use ``$COLUMS''
+  $ echo ${(l:$COLUMNS::-:)}
+# and now with colors (require autoload colors ;colors)
+  $ echo "$bg[red]$fg[black]${(l:42::-:)}"
+%
+# Redirect STDERR to a command like xless without redirecting STDOUT as well.
+  $ foo 2>>(xless)
+# but this executes the command asynchronously. To do it synchronously:
+  $ { { foo 1>&3 } 2>&1 | xless } 3>&1
+%
+# Rename all MP3-Files from name with spaces.mp3 to Name With Spaces.mp3
+  $ for i in *.mp3; do
+  >     mv $i ${${(C)i}:s/Mp3/mp3/}
+  > done
+%
+# Match file names containing only digits and ending with .xml (require
+# *setopt kshglob*)
+  $ ls -l [0-9]##.xml
+  $ ls -l <0->.xml
+%
+# Remove all "non txt" files
+  $ rm ./^*.txt
+%
+# Move 200 files from a directory into another
+  $ mv -- *([1,200]) /another/Dir
+%
+# Convert images (foo.gif => foo.png):
+  $ for i in **/*.gif; convert $i $i:r.png
+%
+# convert a collection of mp3 files to wave or cdr,
+# e.g. file.wav -> file.mp3)
+  $ for i (./*.mp3){mpg321 --w - $i > ${i:r}.wav}
+%
+# Download with LaTeX2HTML  created Files (for example the ZSH-Guide):
+  $ for f in http://zsh.sunsite.dk/Guide/zshguide{,{01..08}}.html; do
+  >     lynx -source $f >${f:t}
+  > done
+%
+# Move all files in dir1 and dir2 that have line counts greater than 10 to
+# another directory say "/more10"
+  $ mv dir[12]/**/*.cr(-.e{'((`wc -l < $REPLY` > 10))'}) /more10
+%
+# Make with dpkg a master-list of everyfile that it has installed
+  $ diff <(find / | sort) <(cat /var/lib/dpkg/info/*.list | sort)
+%
+# Replace this fucking Escape-Sequences:
+  $ autoload colors ; colors
+  $ print "$bg[cyan]$fg[blue]You are a idiot" >> /dev/pts/3
+%
+# Get ASCII value of a character
+  $ char=N ; print $((#char))
+%
+# Filename "Erweiterung"
+# Note: The (N) says to use the nullglob option for this particular
+# glob pattern.
+  $ for i in *.o(N); do
+  >     rm $i
+  > done
+%
+# Rename files; i. e. FOO to foo and bar to BAR
+  $ for i in *(.); mv $i ${i:l} # `FOO' to `foo'
+  $ for i in *(.); mv $i ${i:u} # `bar to `BAR'
+%
+# Show all suid-files in $PATH
+  $ ls -latg ${(s.:.)PATH} | grep '^...s'
+# or more complex ;)
+  $ print -l ${^path}/*(Ns,S)
+# or show only executables with a user given pattern
+  $ print -l ${^path}/*vim*(*N)
+%
+# gzip files when containing a certain string
+  $ gzip ${(ps:\0:)"$(grep -lZ foobar ./*.txt(.))"}
+%
+# A small  one-liner, that reads from stdin and prints to stdout the first
+# unique line i. e. does not print lines that have been printed before
+# (this is similar to the unique command, but unique can only handle
+# adjacent lines).
+  $ IFS=$'\n\n'; print -rl -- ${(Oau)${(Oa)$(cat file;echo .)[1,-2]}}
+%
+# Lists every executable in PATH
+  $ print -l ${^path}/*(-*N)
+%
+# Match all .c files in all subdirectories, _except_ any SCCS subdirectories?
+  $ ls **/*.c~(*/)#SCCS/*
+%
+# List all `README' - files case-insensitive with max. one typo
+  $ ls **/*(#ia2)readme
+%
+# case insensitive checking for variables
+  $ if [[ $OSTYPE == (#i)LINUX*(#I) ]]; then
+  >    echo "Penguin on board."
+  > else
+  >    echo "Not a Linux."
+  > fi

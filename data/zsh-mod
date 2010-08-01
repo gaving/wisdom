@@ -1,0 +1,81 @@
+# NOTE: Zsh 4.3.4 needed!
+  $ autoload -U age
+# files modified today
+  $ print *(e:age today now:)
+# files modified since 5 pm
+  $ print *(e-age 17:00 now-)
+# ... since 5 o'clock yesterda
+  $ print *(e-age yesterday,17:00 now-)
+# ... from last Christmas before today
+  $ print *(e-age 2006/12/25 today-)
+# ... before yesterday
+  $ print *(e-age 1970/01/01 yesterday-)
+# all files modified between the start of those dates
+  $ print *(e:age 2006/10/04 2006/10/09:)
+# all files modified on that date
+  $ print *(e:age 2006/10/04:)
+# Supply times.
+  $ print *(e-age 2006/10/04:10:15 2006/10/04:10:45-)
+%
+# Remove a trailing pathname component, leaving the head. This works like
+# `dirname'.
+  $ echo =ls(:h)
+  /bin
+%
+# Remove all leading pathname components, leaving the tail. This works
+# like `basename'.
+  $ echo =ls(:t)
+  ls
+%
+# Remove the suffix from each file (*.sh in this example)
+   $f:e is $f file extension
+   :h --> head (dirname)
+   :t --> tail (basename)
+   :r --> rest (extension removed)
+  $ for f (*.sh) mv $f $f:r
+%
+# Remove a filename extension of the form `.xxx', leaving the root name.
+  $ echo $PWD
+  /usr/src/linux
+  $ echo $PWD:t
+  linux
+%
+# Remove all but the extension.
+  $ foo=23.42
+  $ echo $foo
+  23.42
+  $ echo $foo:e
+  42
+%
+# Print the new command but do not execute it. Only works with history
+# expansion.
+  $ echo =ls(:h)
+  /bin
+  $ !echo:p
+  $ echo =ls(:h)
+%
+# Quote the substituted words, escaping further substitutions.
+  $ bar="23'42"
+  $ echo $bar
+  23'42
+  $ echo $bar:q
+  23\'42
+%
+# Convert the words to all lowercase.
+  $ bar=FOOBAR
+  $ echo $bar
+  FOOBAR
+  $ echo $bar:l
+  foobar
+%
+# Convert the words to all uppercase.
+  $ bar=foobar
+  $ echo $bar
+  foobar
+  $ echo $bar:u
+  FOOBAR
+%
+# convert 1st char of a word to uppercase
+  $ foo="one two three four"
+  $ print -r -- "${(C)foo}"
+  One Two Three Four
